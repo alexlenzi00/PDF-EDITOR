@@ -135,3 +135,15 @@ class CanvasTextBox:
 	def update_canvas_text(self):
 		if hasattr(self, "text_id") and self.text_id:
 			self.canvas.itemconfig(self.text_id, text=self.text, font=(self.font_name, self.font_size), fill=self.color, anchor=self.anchor)
+		else:
+			self.text_id = self.canvas.create_text(
+				self.x, self.y,
+				text=self.text,
+				anchor=self.anchor,
+				font=(self.font_name, self.font_size),
+				fill=self.color
+			)
+
+	def render_on_canvas(self):
+		# Ricrea il testo sul canvas se necessario
+		self.update_canvas_text()

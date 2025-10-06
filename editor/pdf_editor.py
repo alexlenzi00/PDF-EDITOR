@@ -8,6 +8,7 @@ from .pdf_utils import load_page_image, save_pdf_with_texts
 
 FONTS_DIR = "fonts"
 DEFAULT_COLORS = ["#000000", "#FF0000", "#0000FF", "#008000", "#FFA500", "#800080", "#808080"]
+STANDARD_FONTS = ["Helvetica", "Times-Roman", "Courier"]
 
 class PDFEditor:
 	def __init__(self, root):
@@ -29,13 +30,12 @@ class PDFEditor:
 
 	# ---------------- font helpers ----------------
 	def _load_fonts(self):
-		self.system_fonts = sorted(set(tkfont.families()))
 		self.custom_fonts = []
 		if os.path.isdir(FONTS_DIR):
 			for f in os.listdir(FONTS_DIR):
 				if f.lower().endswith(".ttf"):
 					self.custom_fonts.append(os.path.splitext(f)[0])
-		self.font_list = self.custom_fonts + self.system_fonts
+		self.font_list = STANDARD_FONTS + self.custom_fonts
 
 	# ---------------- UI ----------------
 	def _build_ui(self):
@@ -49,10 +49,13 @@ class PDFEditor:
 		self.save_btn = ttk.Button(toolbar, text="💾 Salva", command=self.save_pdf)
 		self.save_btn.pack(side="left", padx=4)
 
-		self.font_var = tk.StringVar(value="Arial")
+		self.font_var = tk.StringVar(value=STANDARD_FONTS[0])
 		self.font_combo = ttk.Combobox(toolbar, textvariable=self.font_var, values=self.font_list, width=25)
 		self.font_combo.pack(side="left", padx=4)
 		self.font_combo.bind("<<ComboboxSelected>>", lambda e: self._update_selected_properties())
+
+		self.add_font_btn = ttk.Button(toolbar, text="➕ Font", command=self._add_custom_font)
+		self.add_font_btn.pack(side="left", padx=4)
 
 		self.size_var = tk.IntVar(value=12)
 		self.size_combo = ttk.Combobox(toolbar, textvariable=self.size_var, values=[8,10,12,14,16,18,20,24,32], width=4)
@@ -104,6 +107,24 @@ class PDFEditor:
 			self.selected_box.set_font(self.font_var.get(), self.size_var.get())
 			self.selected_box.set_color(self.color_var.get())
 			self.selected_box.set_align(self.align_var.get())
+
+	def _add_custom_font(self):
+		path = filedialog.askopenfilename(filetypes=[("Font TTF", "*.ttf")])
+		if not path:
+			return
+		if not os.path.isdir(FONTS_DIR):
+			os.makedirs(FONTS_DIR)
+		font_name = os.path.basename(path)
+		dest_path = os.path.join(FONTS_DIR, font_name)
+		try:
+			if not os.path.isfile(dest_path):
+				with open(path, "rb") as src, open(dest_path, "wb") as dst:
+					dst.write(src.read())
+			self._load_fonts()
+			self.font_combo["values"] = self.font_list
+			messagebox.showinfo("Font aggiunto", f"Font '{font_name}' aggiunto!")
+		except Exception as e:
+			messagebox.showerror("Errore", f"Impossibile aggiungere il font:\n{e}")
 
 	def _on_delete_key(self, event=None):
 		if self.selected_box:
@@ -221,7 +242,8 @@ class PDFEditor:
 				"align": tb.align,
 				"box_width": tb.w
 			})
-		save_pdf_with_texts(self.pdf_path, out, texts)
+
+		save_pdf_with_texts(self.pdf_path, out, texts, display_img_width=self.display_img.width, display_img_height=self.display_img.height)
 		messagebox.showinfo("Salvato", f"PDF salvato in {out}")
 
 	def remove_selected(self):

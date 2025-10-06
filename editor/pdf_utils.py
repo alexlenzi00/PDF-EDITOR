@@ -1,5 +1,13 @@
 import fitz
 from PIL import Image
+from PyPDF2 import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import io
+import os
 
 def load_page_image(pdf_path, page_number=0, zoom=1.0, dpi_scale=2):
 	"""
@@ -16,51 +24,72 @@ def load_page_image(pdf_path, page_number=0, zoom=1.0, dpi_scale=2):
 	doc.close()
 	return img, rect, pix.width, pix.height
 
-def save_pdf_with_texts(base_pdf_path, output_path, texts, page_number=0, display_img_width=1, page_rect=None):
+def carica_font_ttf(font_name):
+	"""
+	Registra un font TrueType per ReportLab.
+	font_name: nome del font senza estensione (es. "Arial")
+	Cerca il file TTF nella cartella "fonts" o nella cartella corrente.
+	"""
+	standard_fonts = ["Helvetica", "Times New Roman", "Courier"]
+	if font_name in standard_fonts:
+		return font_name
+	# Cerca il file TTF nella cartella fonts o nella cartella corrente
+	ttf_path = os.path.join("fonts", font_name + ".ttf")
+	if not os.path.isfile(ttf_path):
+		ttf_path = font_name + ".ttf"
+	if os.path.isfile(ttf_path):
+		try:
+			if font_name not in pdfmetrics.getRegisteredFontNames():
+				pdfmetrics.registerFont(TTFont(font_name, ttf_path))
+				return font_name
+		except Exception:
+			return "Helvetica"
+	else:
+		return "Helvetica"
+
+def hex_to_rgb(hex_color):
+	hex_color = hex_color.lstrip('#')
+	return tuple(int(hex_color[i:i+2], 16)/255 for i in (0, 2, 4))
+
+def save_pdf_with_texts(pdf_path, out_path, texts, display_img_width, display_img_height):
 	"""
 	texts: list di dict con keys: text,font,size,color,x,y,align
 	display_img_width: larghezza (px) dell'immagine visualizzata in editor, usata per mapping coords -> PDF points
 	page_rect: fitz.Rect della pagina sorgente (punti PDF)
 	"""
-	if page_rect is None:
-		# apri e usa prima pagina come fallback
-		doc_tmp = fitz.open(base_pdf_path)
-		page_rect = doc_tmp[0].rect
-		doc_tmp.close()
+	reader = PdfReader(pdf_path)
+	writer = PdfWriter()
 
-	doc_src = fitz.open(base_pdf_path)
-	new_doc = fitz.open()
-	new_page = new_doc.new_page(width=page_rect.width, height=page_rect.height)
-	new_page.show_pdf_page(page_rect, doc_src, page_number)
+	# Font standard supportati da ReportLab
+	standard_fonts = ["Helvetica", "Times-Roman", "Courier"]
 
-	# fattore punti-per-pixel
-	factor = page_rect.width / float(display_img_width) if display_img_width else 1.0
+	for page_num, page in enumerate(reader.pages):
+		packet = io.BytesIO()
+		pdf_width = float(page.mediabox.width)
+		pdf_height = float(page.mediabox.height)
+		scale_x = pdf_width / display_img_width
+		scale_y = pdf_height / display_img_height
 
-	for t in texts:
-		px = t["x"] * factor
-		py = t["y"] * factor
-		# convert hex color to tuple
-		c = t.get("color", "#000000").lstrip("#")
-		r, g, b = tuple(int(c[i:i+2], 16)/255.0 for i in (0,2,4))
-		# scala size: display-size * factor
-		pdf_size = max(1.0, t.get("size", 12) * factor)
-		fontname = t.get("font", "helv")
-		align = t.get("align", "left")
-		# fitz text alignment via insert_textbox if needed
-		try:
-			# create a small bbox for single-line insert with alignment
-			# width in points: approximate using factor * some width (we approximate with 200pt)
-			width_pts = (t.get("box_width", 200) * factor) if t.get("box_width") else 200 * factor
-			rect = fitz.Rect(px, py, px + width_pts, py + pdf_size*1.5)
-			new_page.insert_textbox(rect, t["text"], fontsize=pdf_size, fontname=fontname, color=(r,g,b),
-									align=({"left":0, "center":1, "right":2}.get(align, 0)))
-		except Exception:
-			# fallback insert_text
-			try:
-				new_page.insert_text((px, py), t["text"], fontsize=pdf_size, fontname=fontname, color=(r,g,b))
-			except Exception:
-				new_page.insert_text((px, py), t["text"], fontsize=pdf_size, color=(r,g,b))
+		can = canvas.Canvas(packet, pagesize=(pdf_width, pdf_height))
 
-	new_doc.save(output_path)
-	new_doc.close()
-	doc_src.close()
+		for t in texts:
+			x = t['x'] * scale_x
+			scale_font = (scale_x + scale_y) / 2 + 0.1
+			font_size = t['size'] * scale_font
+			y = pdf_height - (t['y'] * scale_y) - font_size
+			font_name = carica_font_ttf(t.get("font", "Helvetica"))
+
+			color = t.get("color", "#000000")
+			r, g, b = hex_to_rgb(color)
+			can.setFillColorRGB(r, g, b)
+			can.setFont(font_name, font_size)
+			can.drawString(x, y, t['text'])
+
+		can.save()
+		packet.seek(0)
+		overlay_pdf = PdfReader(packet)
+		page.merge_page(overlay_pdf.pages[0])
+		writer.add_page(page)
+
+	with open(out_path, "wb") as f:
+		writer.write(f)
