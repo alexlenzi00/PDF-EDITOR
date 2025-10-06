@@ -22,6 +22,7 @@ class CanvasTextBox:
 		self.text_widget.insert("1.0", text)
 		self.text_widget.configure(font=(self.font_family, self.font_size), fg=self.color)
 		self.text_widget.pack(expand=True, fill="both")
+		self.text_widget.bind("<FocusOut>", lambda e: self.canvas.focus_set())
 
 		# canvas window e border
 		self.window_id = canvas.create_window(self.x, self.y, window=self.frame, anchor="nw", width=self.w, height=self.h)
