@@ -1,115 +1,110 @@
 import tkinter as tk
 
 class CanvasTextBox:
-	HANDLE_SIZE = 8
+    def __init__(self, canvas, x, y, w=200, h=40, text="", font=("Arial", 12),
+                 color="#000000", align="left"):
+        self.canvas = canvas
+        self.x, self.y = x, y
+        self.w, self.h = w, h
+        self.text = text
+        self.font = font
+        self.font_family = font[0]
+        self.font_size = font[1]
+        self.color = color
+        self.align = align
+        self.selected = False
+        self.dragging = False
+        self.start_x = None
+        self.start_y = None
 
-	def __init__(self, canvas, x, y, w=200, h=30, text="Nuovo testo",
-				font=("Helvetica",12), color="#000000", align="left"):
-		self.canvas = canvas
-		self.x = x
-		self.y = y
-		self.w = w
-		self.h = h
-		self.text = text
-		self.font_family = font[0]
-		self.font_size = font[1]
-		self.color = color
-		self.align = align
+        # Crea il frame e la casella di testo
+        self.frame = tk.Frame(canvas, bd=0, highlightthickness=0, bg="white")
+        self.text_widget = tk.Text(
+            self.frame,
+            wrap="word",
+            font=self.font,
+            fg=self.color,
+            padx=4, pady=2,
+            height=1, width=1,
+            relief="flat",
+            undo=True
+        )
+        self.text_widget.insert("1.0", self.text)
+        self.text_widget.pack(expand=True, fill="both")
 
-		# frame e Text
-		self.frame = tk.Frame(canvas)
-		self.text_widget = tk.Text(self.frame, wrap="word", bd=0, padx=2, pady=2)
-		self.text_widget.insert("1.0", text)
-		self.text_widget.configure(font=(self.font_family, self.font_size), fg=self.color)
-		self.text_widget.pack(expand=True, fill="both")
-		self.text_widget.bind("<FocusOut>", lambda e: self.canvas.focus_set())
-		self.text_widget.bind("<Button-1>", self._focus_click)
+        # Aggiungi frame al canvas
+        self.window_id = self.canvas.create_window(
+            x, y, window=self.frame, anchor="nw", width=w, height=h
+        )
 
-		# canvas window e border
-		self.window_id = canvas.create_window(self.x, self.y, window=self.frame, anchor="nw", width=self.w, height=self.h)
-		self.border_id = canvas.create_rectangle(self.x, self.y, self.x+self.w, self.y+self.h, outline="#4a90e2", dash=(3,2))
+        # Bordo per evidenziare la selezione
+        self.border_id = self.canvas.create_rectangle(
+            x, y, x + w, y + h, outline="", width=2
+        )
 
-		# bind drag direttamente sul frame
-		self.frame.bind("<Button-1>", self._on_frame_click)
-		self.frame.bind("<B1-Motion>", self._on_frame_drag)
-		self.frame.bind("<ButtonRelease-1>", self._on_frame_release)
+        # Dizionario per eventuali handle di resize
+        self.handles = {}
 
-		self._drag_start = None
+        # Binding
+        self.frame.bind("<Button-1>", self._on_frame_click)
+        self.frame.bind("<B1-Motion>", self._on_frame_drag)
+        self.frame.bind("<ButtonRelease-1>", self._on_frame_release)
+        self.text_widget.bind("<Button-1>", self._on_text_click)
+        self.text_widget.bind("<FocusOut>", self._on_focus_out)
 
-	def _on_frame_click(self, event):
-		# Seleziona questa casella
-		self.canvas.master._select_box(self)
-		self.canvas.master.dragging = True
-		self.canvas.master.last_mouse = (event.x_root - self.canvas.winfo_rootx(),
-										event.y_root - self.canvas.winfo_rooty())
+    # ---- Gestione selezione ----
+    def set_selected(self, sel=True):
+        self.selected = sel
+        if sel:
+            self.canvas.itemconfigure(self.border_id, outline="#4a90e2", width=2)
+        else:
+            self.canvas.itemconfigure(self.border_id, outline="")
 
-	def _on_frame_drag(self, event):
-		master = self.canvas.master
-		if master.dragging and master.selected_box == self:
-			x, y = event.x_root - self.canvas.winfo_rootx(), event.y_root - self.canvas.winfo_rooty()
-			dx = x - master.last_mouse[0]
-			dy = y - master.last_mouse[1]
-			master.last_mouse = (x, y)
-			self.move(dx, dy)
+    # ---- Gestione movimento ----
+    def _on_frame_click(self, event):
+        master = self.canvas.master
+        master._select_box(self)
+        self.dragging = True
+        self.start_x = event.x_root
+        self.start_y = event.y_root
 
-	def _on_frame_release(self, event):
-		master = self.canvas.master
-		master.dragging = False
+    def _on_frame_drag(self, event):
+        if not self.dragging:
+            return
+        dx = event.x_root - self.start_x
+        dy = event.y_root - self.start_y
+        self.move(dx, dy)
+        self.start_x = event.x_root
+        self.start_y = event.y_root
 
-	# --- metodi drag ---
-	def _start_drag(self, event):
-		self._drag_start = (event.x, event.y)
+    def _on_frame_release(self, event):
+        self.dragging = False
 
-	def _drag(self, event):
-		dx = event.x - self._drag_start[0]
-		dy = event.y - self._drag_start[1]
-		self.move(dx, dy)
+    # ---- Gestione focus ----
+    def _on_text_click(self, event):
+        self.canvas.master._select_box(self)
+        self.text_widget.focus_set()
 
-	def _end_drag(self, event):
-		self._drag_start = None
+    def _on_focus_out(self, event):
+        # Quando clicchi fuori, rimuove il focus
+        self.canvas.focus_set()
 
-	# --- metodi di utilità ---
-	def _focus_click(self, event):
-		# Quando si clicca nel Text, seleziona la casella
-		self.canvas.master._select_box(self)  # chiama il metodo del PDFEditor
-		# permetti che il Text gestisca anche il click
-		return None
+    # ---- Utility ----
+    def move(self, dx, dy):
+        self.x += dx
+        self.y += dy
+        self.canvas.move(self.window_id, dx, dy)
+        self.canvas.move(self.border_id, dx, dy)
 
+    def get_text(self):
+        return self.text_widget.get("1.0", "end-1c")
 
-	def move(self, dx, dy):
-		self.x += dx
-		self.y += dy
-		self.canvas.move(self.window_id, dx, dy)
-		self.canvas.move(self.border_id, dx, dy)
-
-	def resize(self, new_w, new_h):
-		self.w = max(30, new_w)
-		self.h = max(20, new_h)
-		self.canvas.itemconfigure(self.window_id, width=self.w, height=self.h)
-		self.canvas.coords(self.border_id, self.x, self.y, self.x+self.w, self.y+self.h)
-
-	def set_text(self, text):
-		self.text_widget.delete("1.0","end")
-		self.text_widget.insert("1.0", text)
-
-	def get_text(self):
-		return self.text_widget.get("1.0","end-1c")
-
-	def set_font(self, family, size):
-		self.font_family = family
-		self.font_size = size
-		self.text_widget.configure(font=(self.font_family, self.font_size))
-
-	def set_color(self, color):
-		self.color = color
-		self.text_widget.configure(fg=self.color)
-
-	def set_align(self, align):
-		self.align = align
-		self.text_widget.tag_configure("align", justify=align)
-		self.text_widget.tag_add("align","1.0","end")
-
-	def destroy(self):
-		self.canvas.delete(self.window_id)
-		self.canvas.delete(self.border_id)
-		self.frame.destroy()
+    def update_style(self, font=None, color=None):
+        if font:
+            self.font = font
+            self.font_family = font[0]
+            self.font_size = font[1]
+            self.text_widget.configure(font=font)
+        if color:
+            self.color = color
+            self.text_widget.configure(fg=color)
