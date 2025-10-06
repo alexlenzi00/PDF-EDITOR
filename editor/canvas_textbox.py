@@ -23,17 +23,38 @@ class CanvasTextBox:
 		self.text_widget.configure(font=(self.font_family, self.font_size), fg=self.color)
 		self.text_widget.pack(expand=True, fill="both")
 		self.text_widget.bind("<FocusOut>", lambda e: self.canvas.focus_set())
+		self.text_widget.bind("<Button-1>", self._focus_click)
 
 		# canvas window e border
 		self.window_id = canvas.create_window(self.x, self.y, window=self.frame, anchor="nw", width=self.w, height=self.h)
 		self.border_id = canvas.create_rectangle(self.x, self.y, self.x+self.w, self.y+self.h, outline="#4a90e2", dash=(3,2))
 
 		# bind drag direttamente sul frame
-		self.frame.bind("<Button-1>", self._start_drag)
-		self.frame.bind("<B1-Motion>", self._drag)
-		self.frame.bind("<ButtonRelease-1>", self._end_drag)
+		self.frame.bind("<Button-1>", self._on_frame_click)
+		self.frame.bind("<B1-Motion>", self._on_frame_drag)
+		self.frame.bind("<ButtonRelease-1>", self._on_frame_release)
 
 		self._drag_start = None
+
+	def _on_frame_click(self, event):
+		# Seleziona questa casella
+		self.canvas.master._select_box(self)
+		self.canvas.master.dragging = True
+		self.canvas.master.last_mouse = (event.x_root - self.canvas.winfo_rootx(),
+										event.y_root - self.canvas.winfo_rooty())
+
+	def _on_frame_drag(self, event):
+		master = self.canvas.master
+		if master.dragging and master.selected_box == self:
+			x, y = event.x_root - self.canvas.winfo_rootx(), event.y_root - self.canvas.winfo_rooty()
+			dx = x - master.last_mouse[0]
+			dy = y - master.last_mouse[1]
+			master.last_mouse = (x, y)
+			self.move(dx, dy)
+
+	def _on_frame_release(self, event):
+		master = self.canvas.master
+		master.dragging = False
 
 	# --- metodi drag ---
 	def _start_drag(self, event):
@@ -48,6 +69,13 @@ class CanvasTextBox:
 		self._drag_start = None
 
 	# --- metodi di utilità ---
+	def _focus_click(self, event):
+		# Quando si clicca nel Text, seleziona la casella
+		self.canvas.master._select_box(self)  # chiama il metodo del PDFEditor
+		# permetti che il Text gestisca anche il click
+		return None
+
+
 	def move(self, dx, dy):
 		self.x += dx
 		self.y += dy
