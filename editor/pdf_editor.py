@@ -414,8 +414,8 @@ class PDFEditor:
 		if box:
 			box.set_selected(True)
 			# aggiorna toolbar proprietà
-			self.font_var.set(box.font[0] if box.font else "Arial")
-			self.size_var.set(box.font[1] if box.font else 12)
+			self.font_var.set(box.font_name if box.font_name else "Arial")
+			self.size_var.set(box.font_size if box.font_size else 12)
 			self.color_var.set(box.color if box.color else DEFAULT_COLORS[0])
 			self.align_var.set(box.align if box.align else "left")
 		else:
