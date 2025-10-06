@@ -133,3 +133,16 @@ class CanvasTextBox:
 		# aggiunge testo alla textbox
 		self.text += text
 		self.update_canvas_text()
+
+	def update_canvas_text(self):
+		if hasattr(self, "text_id") and self.text_id:
+			self.canvas.itemconfig(self.text_id, text=self.text)
+		else:
+			# se non esiste ancora, crealo
+			self.text_id = self.canvas.create_text(
+				self.x, self.y, 
+				text=self.text, 
+				anchor="nw",
+				font=(self.font_family, self.font_size),
+				fill=self.color
+			)
