@@ -1,6 +1,16 @@
+import os
+import tkinter as tk
+from tkinter import ttk, filedialog, simpledialog, messagebox
+import tkinter.font as tkfont
+from PIL import Image, ImageTk
+from .canvas_textbox import CanvasTextBox
+from .pdf_utils import load_page_image, save_pdf_with_texts
 
+FONTS_DIR = "fonts"
+DEFAULT_COLORS = ["#000000", "#FF0000", "#0000FF", "#008000", "#FFA500", "#800080", "#808080"]
 
 class PDFEditor:
+
 	def __init__(self, root):
 		self.root = root
 		self.pdf_path = None
@@ -129,11 +139,6 @@ class PDFEditor:
 		self.canvas.bind("<Button-4>", self._on_mousewheel)            # linux up
 		self.canvas.bind("<Button-5>", self._on_mousewheel)            # linux down
 
-		# keyboard bindings on root for delete, copy paste
-		self.root.bind("<Delete>", lambda e: self.remove_selected())
-		self.root.bind("<Control-c>", self._shortcut_copy)
-		self.root.bind("<Control-v>", self._shortcut_paste)
-
 		# ctrl+wheel zoom
 		self.canvas.bind_all("<Control-MouseWheel>", self._on_ctrl_wheel)
 		self.canvas.bind_all("<Control-Button-4>", self._on_ctrl_wheel)
@@ -152,7 +157,7 @@ class PDFEditor:
 		font = (self.font_var.get(), int(self.size_var.get()))
 		color = self.color_var.get()
 		tb = CanvasTextBox(self.canvas, x, y, w=250, h=40,
-						text="Nuovo testo", font=font, color=color,
+						text="", font=font, color=color,
 						align=self.align_var.get())
 		self.textboxes.append(tb)
 		self._select_box(tb)
@@ -184,6 +189,18 @@ class PDFEditor:
 			s = self.clipboard_internal or ""
 		if self.selected_box:
 			self.selected_box.text_widget.insert("insert", s)
+
+	def _update_selected_properties(self):
+		if not self.selected_box:
+			return
+		self.selected_box.set_font(self.font_var.get(), int(self.size_var.get()))
+		self.selected_box.set_color(self.color_var.get())
+		self.selected_box.set_align(self.align_var.get())
+
+	# bind a combobox / color var
+	self.font_combo.bind("<<ComboboxSelected>>", lambda e: self._update_selected_properties())
+	self.size_combo.bind("<<ComboboxSelected>>", lambda e: self._update_selected_properties())
+	self.color_var.trace_add("write", lambda *args: self._update_selected_properties())
 
 
 	def _on_mousewheel(self, event):
