@@ -165,8 +165,7 @@ class PDFEditor:
 						align=self.align_var.get())
 		self.textboxes.append(tb)
 		self._select_box(tb)
-		tb.text_widget.focus_set()
-		tb.text_widget.mark_set("insert", "end")
+		tb._edit_text()
 
 	def _on_delete_key(self, event=None):
 		widget = self.root.focus_get()

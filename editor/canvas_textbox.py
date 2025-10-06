@@ -15,6 +15,7 @@ class CanvasTextBox:
 		self.entry = None
 		self.text_widget = None
 		self.color = color
+		self.handles = {}
 
 		# Determina l'anchor in base all'allineamento
 		anchor_map = {'left': 'nw', 'center': 'n', 'right': 'ne'}
@@ -27,7 +28,7 @@ class CanvasTextBox:
 		canvas.tag_bind(self.text_id, '<Double-1>', self._edit_text)
 
 	# --- Editing del testo ---
-	def _edit_text(self, event):
+	def _edit_text(self, event=None):
 		if self.entry:
 			self.entry.destroy()
 
@@ -108,4 +109,14 @@ class CanvasTextBox:
 		if self.entry:
 			self.entry.config(justify=self.align)
 
-	
+	def bbox(self):
+		"""
+		Restituisce le coordinate del bounding box del testo sul canvas.
+		Compatibile con _on_canvas_click.
+		"""
+		coords = self.canvas.bbox(self.text_id)
+		if coords:
+			return coords  # x1, y1, x2, y2
+		else:
+			# fallback se bbox non esiste
+			return (self.x, self.y, self.x + self.w, self.y + self.h)
