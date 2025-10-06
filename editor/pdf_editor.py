@@ -74,10 +74,10 @@ class PDFEditor:
 		ttk.Separator(toolbar, orient="vertical").pack(side="left", fill="y", padx=6)
 
 		# font selector (combo)
-		self.font_var = tk.StringVar(value="Helvetica")
+		self.font_var = tk.StringVar(value="Arial")
 		self.font_combo = ttk.Combobox(toolbar, textvariable=self.font_var, values=self.font_list, width=25)
 		self.font_combo.pack(side="left", padx=4)
-		self.font_combo.set("Helvetica")
+		self.font_combo.set("Arial")
 		self.font_combo.bind("<<ComboboxSelected>>", lambda e: self._update_selected_properties())
 
 		# size
@@ -414,8 +414,8 @@ class PDFEditor:
 		if box:
 			box.set_selected(True)
 			# aggiorna toolbar proprietà
-			self.font_var.set(box.font_family if box.font_family else "Helvetica")
-			self.size_var.set(box.font_size if box.font_size else 12)
+			self.font_var.set(box.font[0] if box.font else "Arial")
+			self.size_var.set(box.font[1] if box.font else 12)
 			self.color_var.set(box.color if box.color else DEFAULT_COLORS[0])
 			self.align_var.set(box.align if box.align else "left")
 		else:
