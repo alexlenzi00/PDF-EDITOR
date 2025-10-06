@@ -45,7 +45,7 @@ class CanvasTextBox:
 	def _save_edit(self, event=None):
 		if self.entry:
 			self.text = self.entry.get()
-			self.canvas.itemconfig(self.text_id, text=self.text)
+			self.update_canvas_text()
 			self.entry.destroy()
 			self.entry = None
 			self.text_widget = None
@@ -60,7 +60,7 @@ class CanvasTextBox:
 	def set_font(self, font_name, size):
 		self.font_name = font_name
 		self.font_size = size
-		self.canvas.itemconfig(self.text_id, font=(self.font_name, self.font_size))
+		self.update_canvas_text()
 		if self.entry:
 			self.entry.config(font=(self.font_name, self.font_size))
 
@@ -71,9 +71,7 @@ class CanvasTextBox:
 		self.canvas.move(self.text_id, dx, dy)
 
 	def delete(self):
-		self.canvas.delete(self.text_id)
-		if hasattr(self, 'rect_id'):
-			self.canvas.delete(self.rect_id)
+		self.destroy()
 
 	def get_text(self):
 		return self.text
@@ -89,15 +87,15 @@ class CanvasTextBox:
 	def is_selected(self):
 		return self.selected
 
-	def _get_bbox(self):
-		bbox = self.canvas.bbox(self.text_id)
-		if bbox:
-			return bbox
+	def bbox(self):
+		coords = self.canvas.bbox(self.text_id)
+		if coords:
+			return coords
 		return (self.x, self.y, self.x + self.w, self.y + self.h)
 	
 	def set_color(self, color):
 		self.color = color
-		self.canvas.itemconfig(self.text_id, fill=self.color)
+		self.update_canvas_text()
 		if self.entry:
 			self.entry.config(fg=self.color)
 	
@@ -105,7 +103,7 @@ class CanvasTextBox:
 		self.align = align
 		anchor_map = {'left': 'nw', 'center': 'n', 'right': 'ne'}
 		self.anchor = anchor_map.get(self.align, 'nw')
-		self.canvas.itemconfig(self.text_id, anchor=self.anchor)
+		self.update_canvas_text()
 		if self.entry:
 			self.entry.config(justify=self.align)
 
@@ -125,9 +123,9 @@ class CanvasTextBox:
 			self.canvas.delete(self.rect_id)
 		if hasattr(self, "text_id"):
 			self.canvas.delete(self.text_id)
-		if hasattr(self, "text_widget") and self.text_widget:
-			self.text_widget.destroy()
-			self.text_widget = None
+		if self.entry:
+			self.entry.destroy()
+			self.entry = None
 
 	def insert_text(self, text):
 		# aggiunge testo alla textbox
@@ -136,13 +134,4 @@ class CanvasTextBox:
 
 	def update_canvas_text(self):
 		if hasattr(self, "text_id") and self.text_id:
-			self.canvas.itemconfig(self.text_id, text=self.text)
-		else:
-			# se non esiste ancora, crealo
-			self.text_id = self.canvas.create_text(
-				self.x, self.y, 
-				text=self.text, 
-				anchor="nw",
-				font=(self.font_family, self.font_size),
-				fill=self.color
-			)
+			self.canvas.itemconfig(self.text_id, text=self.text, font=(self.font_name, self.font_size), fill=self.color, anchor=self.anchor)
