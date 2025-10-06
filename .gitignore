@@ -1,0 +1,4 @@
+*.bat
+fonts/*
+!fonts/
+__pycache__/
