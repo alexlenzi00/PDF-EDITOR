@@ -160,7 +160,7 @@ class PDFEditor:
 		y = self.canvas.canvasy(event.y)
 		font = (self.font_var.get(), int(self.size_var.get()))
 		color = self.color_var.get()
-		tb = CanvasTextBox(self.canvas, x, y, w=250, h=40,
+		tb = CanvasTextBox(self.canvas, self, x, y, w=250, h=40,
 						text="", font=font, color=color,
 						align=self.align_var.get())
 		self.textboxes.append(tb)
@@ -333,7 +333,7 @@ class PDFEditor:
 			font = (self.font_var.get(), int(self.size_var.get()))
 			color = self.color_var.get()
 			text = "Nuovo testo"
-			tb = CanvasTextBox(self.canvas, x, y, w=250, h=40,
+			tb = CanvasTextBox(self.canvas, self, x, y, w=250, h=40,
 							text=text, font=font, color=color, align=self.align_var.get())
 			self.textboxes.append(tb)
 			self._select_box(tb)
@@ -418,8 +418,6 @@ class PDFEditor:
 			self.size_var.set(box.font_size if box.font_size else 12)
 			self.color_var.set(box.color if box.color else DEFAULT_COLORS[0])
 			self.align_var.set(box.align if box.align else "left")
-			# assicurati che sia visibile
-			self.canvas.see(box.window_id)
 		else:
 			pass
 
