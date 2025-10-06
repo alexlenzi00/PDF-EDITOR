@@ -78,14 +78,17 @@ class PDFEditor:
 		self.font_combo = ttk.Combobox(toolbar, textvariable=self.font_var, values=self.font_list, width=25)
 		self.font_combo.pack(side="left", padx=4)
 		self.font_combo.set("Helvetica")
+		self.font_combo.bind("<<ComboboxSelected>>", lambda e: self._update_selected_properties())
 
 		# size
 		self.size_var = tk.IntVar(value=12)
 		self.size_combo = ttk.Combobox(toolbar, textvariable=self.size_var, values=[8,10,12,14,16,18,20,24,32], width=4)
 		self.size_combo.pack(side="left", padx=4)
+		self.size_combo.bind("<<ComboboxSelected>>", lambda e: self._update_selected_properties())
 
 		# color swatches
 		self.color_var = tk.StringVar(value=DEFAULT_COLORS[0])
+		self.color_var.trace_add("write", lambda *args: self._update_selected_properties())
 		color_frame = ttk.Frame(toolbar)
 		color_frame.pack(side="left", padx=6)
 		ttk.Label(color_frame, text="Colore:").pack(side="left", padx=(0,4))
@@ -101,7 +104,6 @@ class PDFEditor:
 
 		# add text toggle
 		self.add_mode = False
-		self.canvas.bind("<Double-1>", self._on_canvas_doubleclick)
 
 		# delete
 		self.del_btn = ttk.Button(toolbar, text="🗑 Rimuovi", command=self.remove_selected)
@@ -143,6 +145,8 @@ class PDFEditor:
 		self.canvas.bind_all("<Control-MouseWheel>", self._on_ctrl_wheel)
 		self.canvas.bind_all("<Control-Button-4>", self._on_ctrl_wheel)
 		self.canvas.bind_all("<Control-Button-5>", self._on_ctrl_wheel)
+
+		self.canvas.bind("<Double-1>", self._on_canvas_doubleclick)
 
 	# ---------------- shortcuts and bindings ----------------
 	def _bind_shortcuts(self):
@@ -196,12 +200,6 @@ class PDFEditor:
 		self.selected_box.set_font(self.font_var.get(), int(self.size_var.get()))
 		self.selected_box.set_color(self.color_var.get())
 		self.selected_box.set_align(self.align_var.get())
-
-	# bind a combobox / color var
-	self.font_combo.bind("<<ComboboxSelected>>", lambda e: self._update_selected_properties())
-	self.size_combo.bind("<<ComboboxSelected>>", lambda e: self._update_selected_properties())
-	self.color_var.trace_add("write", lambda *args: self._update_selected_properties())
-
 
 	def _on_mousewheel(self, event):
 		# normal scroll when ctrl not pressed

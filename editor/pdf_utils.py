@@ -1,6 +1,5 @@
 import fitz
 from PIL import Image
-from pdf_utils import load_page_image, save_pdf_with_texts
 
 def load_page_image(pdf_path, page_number=0, zoom=1.0, dpi_scale=2):
 	"""
