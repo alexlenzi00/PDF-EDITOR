@@ -117,6 +117,19 @@ class CanvasTextBox:
 		coords = self.canvas.bbox(self.text_id)
 		if coords:
 			return coords  # x1, y1, x2, y2
-		else:
-			# fallback se bbox non esiste
-			return (self.x, self.y, self.x + self.w, self.y + self.h)
+		return (self.x, self.y, self.x + self.w, self.y + self.h)
+
+	def destroy(self):
+		# cancella gli elementi dal canvas
+		if hasattr(self, "rect_id"):
+			self.canvas.delete(self.rect_id)
+		if hasattr(self, "text_id"):
+			self.canvas.delete(self.text_id)
+		if hasattr(self, "text_widget") and self.text_widget:
+			self.text_widget.destroy()
+			self.text_widget = None
+
+	def insert_text(self, text):
+		# aggiunge testo alla textbox
+		self.text += text
+		self.update_canvas_text()
